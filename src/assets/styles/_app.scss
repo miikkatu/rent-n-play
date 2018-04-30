@@ -1,0 +1,61 @@
+.app {
+  background-color: white;
+  border: solid 1px lightgrey;
+  border-radius: 10px;
+  height: 95vh;
+  margin: 0 auto;
+  overflow-y: scroll;
+  width: 80%;
+
+  .header {
+    background-image: url('../images/header.jpeg');
+    background-repeat: no-repeat;
+    background-position: center center;
+    height: 150px;
+    padding: 20px;
+    text-align: center;
+
+    .title {
+      color: white;
+      font-size: 80px;
+    }
+  }
+
+  section {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 20px 20px 0px 20px;
+
+    &.account {
+      div {
+        color: grey;
+        display: flex;
+        flex-direction: row;
+        font-size: 14px;
+        justify-content: flex-start;
+        padding: 5px;
+        width: 75%;
+      }
+    }
+
+    &.actions {
+      div {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        padding: 5px;
+        width: 75%;
+
+        button {
+          margin-right: 10px;
+        }
+      }
+    }
+
+    .heading {
+      margin-bottom: 10px;
+    }
+  }
+}

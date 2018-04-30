@@ -1,0 +1,20 @@
+.transaction {
+  margin-top: 50px;
+
+  .heading {
+    color: grey;
+    display: flex;
+    flex-direction: row;
+    font-size: 20px;
+    font-weight: bold;
+    justify-content: space-between;
+    text-align: left;
+    width: 75%;
+  }
+
+  .details {
+    font-size: 12px;
+    text-align: left;
+    width: 75%;
+  }
+}

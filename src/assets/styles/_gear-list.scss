@@ -1,0 +1,43 @@
+.gear-list {
+  .heading {
+    color: grey;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: left;
+    width: 75%;
+  }
+
+  .gear-heading {
+    color: grey;
+    display: flex;
+    flex-direction: row;
+    font-size: 14px;
+    justify-content: flex-start;
+    padding: 5px;
+    width: 75%;
+
+    .name {
+      flex: 0 0 300px;
+    }
+
+    .rent-price {
+      flex: 0 0 100px;
+    }
+  }
+
+  .gear {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 5px;
+    width: 75%;
+
+    .name {
+      flex: 0 0 300px;
+    }
+
+    .rent-price {
+      flex: 0 0 100px;
+    }
+  }
+}

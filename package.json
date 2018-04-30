@@ -1,0 +1,33 @@
+{
+  "name": "rent-n-play",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "lodash": "^4.17.5",
+    "react": "^16.3.2",
+    "react-dom": "^16.3.2",
+    "react-redux": "^5.0.7",
+    "react-router": "^4.2.0",
+    "react-router-redux": "^5.0.0-alpha.9",
+    "react-scripts": "1.1.4",
+    "redux": "^4.0.0",
+    "redux-actions": "^2.3.0",
+    "truffle-contract": "^3.0.5",
+    "web3": "^1.0.0-beta.33"
+  },
+  "devDependencies": {
+    "node-sass-chokidar": "^1.2.2",
+    "npm-run-all": "^4.1.2"
+  },
+  "scripts": {
+    "build": "npm run build-css && react-scripts build",
+    "build-js": "react-scripts build",
+    "build-css":
+      "node-sass-chokidar --include-path ./node_modules/ ./src -o ./src",
+    "eject": "react-scripts eject",
+    "start": "npm-run-all -p start-js watch-css ",
+    "start-js": "react-scripts start",
+    "watch-css":
+      "npm run build-css && node-sass-chokidar --include-path ./src --include-path ./node_modules src/ -o src/ --watch --recursive"
+  }
+}
