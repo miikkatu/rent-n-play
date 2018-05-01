@@ -18,8 +18,9 @@ import './assets/styles/styles.css';
 // Create a history of your choosing (we're using a browser history in this case)
 const history = createHistory();
 
-// Build the middleware for intercepting and dispatching navigation actions
-const middleware = applyMiddleware(routerMiddleware(history));
+// Enable Redux devtools extension
+const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
+const initialState = {};
 
 // Add the reducer to your store on the `router` key
 // Also apply our middleware for navigating and for redux devtools
@@ -28,10 +29,8 @@ const store = createStore(
     ...reducers,
     router: routerReducer
   }),
-  compose(
-    middleware,
-    window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
-  )
+  initialState,
+  composeEnhancers(applyMiddleware(routerMiddleware(history)))
 );
 
 ReactDOM.render(
