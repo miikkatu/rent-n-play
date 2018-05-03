@@ -47,6 +47,13 @@ contract RentalService is Ownable {
     }
   }
 
+  /// @notice Checks if the sender is the contract owner
+  /// @return True if sender is the owner
+  function isOwner() external view returns (bool) {
+    require(owner == msg.sender);
+    return true;
+  }
+
   /// @notice Lets the owner see the balance on the contract
   /// @return The contract balance
   function getContractBalance() external view onlyOwner returns (uint) {

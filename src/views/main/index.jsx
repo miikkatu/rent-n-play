@@ -2,17 +2,20 @@ import isEmpty from 'lodash/isEmpty';
 import round from 'lodash/round';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import { push } from 'react-router-redux';
 import Contract from 'truffle-contract';
 
 import RentalService from '../../build/contracts/RentalService.json';
 import { GearList, MyRentals, Transaction } from '../../components';
 import { converter } from '../../config';
-import * as actions from '../../redux/actions';
+
+import * as appActions from '../../redux/app/actions';
+import * as contractActions from '../../redux/contract/actions';
+import * as itemsActions from '../../redux/items/actions';
 
 import {
   fixTruffleContractCompatibilityIssue,
-  getCurrentProvider,
-  default as web3
+  getCurrentProvider
 } from '../../web3';
 
 class MainView extends Component {
@@ -21,9 +24,7 @@ class MainView extends Component {
 
     this.state = {
       balance: undefined,
-      blockNumber: undefined,
-      coinbase: undefined,
-      contract: undefined
+      blockNumber: undefined
     };
   }
 
@@ -33,9 +34,9 @@ class MainView extends Component {
 
   formatGear = gear => ({
     // Name and price need to be converted
-    gearId: parseInt(web3.utils.numberToHex(gear[0]), 16),
-    gearName: web3.utils.hexToAscii(gear[1]),
-    rentPrice: parseInt(web3.utils.numberToHex(gear[2]), 16),
+    gearId: parseInt(this.props.web3.utils.numberToHex(gear[0]), 16),
+    gearName: this.props.web3.utils.hexToAscii(gear[1]),
+    rentPrice: parseInt(this.props.web3.utils.numberToHex(gear[2]), 16),
     isRented: gear[3]
   });
 
@@ -44,50 +45,21 @@ class MainView extends Component {
     contractInstance.setProvider(getCurrentProvider());
     contractInstance = fixTruffleContractCompatibilityIssue(contractInstance);
 
-    contractInstance
-      .deployed()
-      .then(deployedContractInstance => {
-        this.setState({
-          contract: deployedContractInstance
-        });
+    this.props.setContract(contractInstance);
 
-        // Get account data from web3.eth
-        this.updateAccountData();
-      })
-      .catch(error => {
-        console.log(error);
-      });
-  };
-
-  getContractBalance = () => {
-    this.state.contract.getContractBalance.call().then(contractBalance => {
-      alert(
-        `Contract balance is ${parseInt(
-          web3.utils.numberToHex(contractBalance),
-          16
-        ) / converter} ETH`
-      );
-    });
-  };
-
-  withdraw = () => {
-    this.state.contract
-      .withdraw({
-        from: this.state.coinbase,
-        gas: 1000000
-      })
-      .then(transaction => {
-        this.updateAccountData();
-        this.props.setTransaction(transaction);
-      });
+    // Get account data from this.props.web3.eth
+    this.updateAccountData();
   };
 
   getMyRentals = () => {
-    return this.state.contract.getRentalIdsByUser
-      .call()
+    return this.props.contract
+      .deployed()
+      .then(deployedContract => {
+        return deployedContract.getRentalIdsByUser.call();
+      })
       .then(rentals => {
         return rentals.map(id => {
-          return parseInt(web3.utils.numberToHex(id), 16);
+          return parseInt(this.props.web3.utils.numberToHex(id), 16);
         });
       })
       .catch(error => {
@@ -96,8 +68,11 @@ class MainView extends Component {
   };
 
   getGearById = id => {
-    return this.state.contract.getGearById
-      .call(id)
+    return this.props.contract
+      .deployed()
+      .then(deployedContract => {
+        return deployedContract.getGearById.call(id);
+      })
       .then(gear => {
         return this.formatGear(gear);
       })
@@ -106,23 +81,38 @@ class MainView extends Component {
       });
   };
 
-  updateAccountData = () => {
-    web3.eth.getCoinbase().then(coinbase => {
-      this.setState({ coinbase });
+  isOwner = () => {
+    this.props.contract.deployed().then(deployedContract => {
+      deployedContract.isOwner
+        .call()
+        .then(response => {
+          this.props.setIsOwner(response);
+        })
+        .catch(error => {
+          console.log(error);
+        });
+    });
+  };
 
-      web3.eth.getBalance(coinbase).then(balance => {
+  updateAccountData = () => {
+    this.props.web3.eth.getCoinbase().then(account => {
+      this.props.setAccount(account);
+
+      this.props.web3.eth.getBalance(account).then(balance => {
         this.setState({
-          balance: web3.utils.fromWei(balance)
+          balance: this.props.web3.utils.fromWei(balance)
         });
       });
     });
 
-    web3.eth.getBlockNumber().then(block => {
+    this.props.web3.eth.getBlockNumber().then(block => {
       this.setState({ blockNumber: block });
     });
   };
 
   updateGearList = () => {
+    this.isOwner();
+
     // Fixed list of ids
     const gearIds = [1, 2, 3];
 
@@ -150,52 +140,56 @@ class MainView extends Component {
     );
 
     if (answer) {
-      return (
-        this.state.contract
-          // Send transaction with fixed amount of gas
-          .rentGear(gear.gearId, {
-            from: this.state.coinbase,
-            gas: 1000000,
-            value: gear.rentPrice
-          })
-          .then(transaction => {
-            // Update redux store
-            this.props.rentGear(gear.gearId);
-            this.props.setTransaction(transaction);
-            // Update balance and other account data
-            this.updateAccountData();
-          })
-          // .then(
-          //   rentalService
-          //     .Rent({ fromBlock: this.state.blockNumber })
-          //     .watch((err, res) => console.info('result: ', res))
-          // )
-          .catch(error => {
-            console.log('Error: ', error);
-          })
-      );
+      return this.props.contract.deployed().then(deployedContract => {
+        return (
+          deployedContract
+            // Send transaction with fixed amount of gas
+            .rentGear(gear.gearId, {
+              from: this.props.account,
+              gas: 1000000,
+              value: gear.rentPrice
+            })
+            .then(transaction => {
+              // Update redux store
+              this.props.rentGear(gear.gearId);
+              this.props.setTransaction(transaction);
+              // Update balance and other account data
+              this.updateAccountData();
+            })
+            // .then(
+            //   rentalService
+            //     .Rent({ fromBlock: this.state.blockNumber })
+            //     .watch((err, res) => console.info('result: ', res))
+            // )
+            .catch(error => {
+              console.log('Error: ', error);
+            })
+        );
+      });
     }
   };
 
   handleClickReturn = gear => {
-    return (
-      this.state.contract
-        // Send transaction with fixed amount of gas
-        .returnGear(gear.gearId, {
-          from: this.state.coinbase,
-          gas: 1000000
-        })
-        .then(transaction => {
-          // Update redux store
-          this.props.returnGear(gear.gearId);
-          this.props.setTransaction(transaction);
-          // Update balance and other account data
-          this.updateAccountData();
-        })
-        .catch(error => {
-          console.log('Error: ', error);
-        })
-    );
+    return this.props.contract.deployed().then(deployedContract => {
+      return (
+        deployedContract
+          // Send transaction with fixed amount of gas
+          .returnGear(gear.gearId, {
+            from: this.props.account,
+            gas: 1000000
+          })
+          .then(transaction => {
+            // Update redux store
+            this.props.returnGear(gear.gearId);
+            this.props.setTransaction(transaction);
+            // Update balance and other account data
+            this.updateAccountData();
+          })
+          .catch(error => {
+            console.log('Error: ', error);
+          })
+      );
+    });
   };
 
   render() {
@@ -209,14 +203,13 @@ class MainView extends Component {
             <button onClick={() => this.updateGearList()}>
               Update from contract
             </button>
-            <button onClick={() => this.getContractBalance()}>
-              Contract balance (owner)
-            </button>
-            <button onClick={() => this.withdraw()}>Withdraw (owner)</button>
+            {this.props.isOwner && (
+              <button onClick={() => this.props.redirect()}>Owner view</button>
+            )}
           </div>
         </section>
         <section className="account">
-          <div>Account: {this.state.coinbase}</div>
+          <div>Account: {this.props.account}</div>
           <div>Balance: {round(this.state.balance, 3)} ETH</div>
         </section>
         <GearList
@@ -239,28 +232,44 @@ class MainView extends Component {
 }
 
 const mapStateToProps = state => ({
-  gearList: state.gearList,
-  transaction: state.transaction
+  account: state.app.account,
+  contract: state.contract,
+  gearList: state.items,
+  isOwner: state.app.isOwner,
+  transaction: state.app.transaction,
+  web3: state.web3.data
 });
 
 const mapDispatchToProps = dispatch => ({
   dismissTransaction: () => {
-    dispatch(actions.dismissTransaction());
+    dispatch(appActions.dismissTransaction());
+  },
+  redirect: () => {
+    dispatch(push('/owner'));
   },
   rentGear: id => {
-    dispatch(actions.rentGear({ id }));
+    dispatch(itemsActions.rentGear({ id }));
   },
   returnGear: id => {
-    dispatch(actions.returnGear({ id }));
+    dispatch(itemsActions.returnGear({ id }));
+  },
+  setAccount: account => {
+    dispatch(appActions.setAccount(account));
+  },
+  setContract: contract => {
+    dispatch(contractActions.setContract(contract));
   },
   setGearList: gearList => {
-    dispatch(actions.setGearList(gearList));
+    dispatch(itemsActions.setGearList(gearList));
+  },
+  setIsOwner: isOwner => {
+    dispatch(appActions.setIsOwner(isOwner));
   },
   setRentedByMe: rentedByMe => {
-    dispatch(actions.setRentedByMe(rentedByMe));
+    dispatch(itemsActions.setRentedByMe(rentedByMe));
   },
   setTransaction: transaction => {
-    dispatch(actions.setTransaction(transaction));
+    dispatch(appActions.setTransaction(transaction));
   }
 });
 

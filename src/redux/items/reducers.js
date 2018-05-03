@@ -2,7 +2,7 @@ import { handleActions } from 'redux-actions';
 
 import * as actions from './actions';
 
-const gearList = handleActions(
+export default handleActions(
   {
     [actions.setGearList]: (state, action) => action.payload,
     [actions.setRentedByMe]: (state, action) =>
@@ -33,16 +33,3 @@ const gearList = handleActions(
   },
   []
 );
-
-const transaction = handleActions(
-  {
-    [actions.dismissTransaction]: () => {},
-    [actions.setTransaction]: (state, action) => action.payload
-  },
-  {}
-);
-
-export default {
-  gearList,
-  transaction
-};

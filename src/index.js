@@ -4,15 +4,15 @@ import { Provider } from 'react-redux';
 import { Route } from 'react-router';
 import {
   ConnectedRouter,
-  routerReducer,
+  // routerReducer,
   routerMiddleware
 } from 'react-router-redux';
 import { compose, createStore, combineReducers, applyMiddleware } from 'redux';
 import createHistory from 'history/createBrowserHistory';
 
-import { MainView } from './views';
+import { MainView, OwnerView } from './views';
 
-import reducers from './redux/reducers';
+import { reducers } from './reducers';
 import './assets/styles/styles.css';
 
 // Create a history of your choosing (we're using a browser history in this case)
@@ -26,8 +26,7 @@ const initialState = {};
 // Also apply our middleware for navigating and for redux devtools
 const store = createStore(
   combineReducers({
-    ...reducers,
-    router: routerReducer
+    ...reducers
   }),
   initialState,
   composeEnhancers(applyMiddleware(routerMiddleware(history)))
@@ -39,6 +38,7 @@ ReactDOM.render(
     <ConnectedRouter history={history}>
       <div>
         <Route exact path="/" component={MainView} />
+        <Route exact path="/owner" component={OwnerView} />
       </div>
     </ConnectedRouter>
   </Provider>,
