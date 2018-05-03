@@ -8,6 +8,7 @@ export const providers = {
   )
 };
 
+// MetaMask
 if (
   typeof window.web3 !== 'undefined' &&
   typeof window.web3.currentProvider !== 'undefined'
@@ -27,16 +28,7 @@ export function setProvider(provider) {
   }
 }
 
-// Abstract the getBalance object
-export function getBalance() {
-  return web3.eth.getBalance.apply(web3.eth, arguments);
-}
-
-// Abstract contract object
-export function contract() {
-  return web3.eth.contract.apply(web3.eth, arguments);
-}
-
+// truffle-contract does not support web3 1.0 fully yet
 // https://github.com/trufflesuite/truffle-contract/issues/57#issuecomment-331300494
 export function fixTruffleContractCompatibilityIssue(contract) {
   if (typeof contract.currentProvider.sendAsync !== 'function') {

@@ -4,12 +4,10 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import Contract from 'truffle-contract';
 
+import RentalService from '../../build/contracts/RentalService.json';
 import { GearList, MyRentals, Transaction } from '../../components';
 import { converter } from '../../config';
-
 import * as actions from '../../redux/actions';
-
-import RentalService from '../../build/contracts/RentalService.json';
 
 import {
   fixTruffleContractCompatibilityIssue,
@@ -21,24 +19,16 @@ class MainView extends Component {
   constructor(props) {
     super(props);
 
-    // Initialize contract instance and set its provider
-    let rentalServiceInstance = Contract(RentalService);
-    rentalServiceInstance.setProvider(getCurrentProvider());
-    rentalServiceInstance = fixTruffleContractCompatibilityIssue(
-      rentalServiceInstance
-    );
-
     this.state = {
-      accounts: [],
       balance: undefined,
       blockNumber: undefined,
       coinbase: undefined,
-      rentalServiceInstance
+      contract: undefined
     };
   }
 
   componentDidMount = () => {
-    this.updateAccountData();
+    this.setContractInstance(RentalService);
   };
 
   formatGear = gear => ({
@@ -49,39 +39,52 @@ class MainView extends Component {
     isRented: gear[3]
   });
 
-  getContractBalance = () => {
-    this.state.rentalServiceInstance.deployed().then(rentalService => {
-      rentalService.getContractBalance.call().then(contractBalance => {
-        alert(
-          `Contract balance is ${parseInt(
-            web3.utils.numberToHex(contractBalance),
-            16
-          ) / converter} ETH`
-        );
+  setContractInstance = contract => {
+    let contractInstance = Contract(contract);
+    contractInstance.setProvider(getCurrentProvider());
+    contractInstance = fixTruffleContractCompatibilityIssue(contractInstance);
+
+    contractInstance
+      .deployed()
+      .then(deployedContractInstance => {
+        this.setState({
+          contract: deployedContractInstance
+        });
+
+        // Get account data from web3.eth
+        this.updateAccountData();
+      })
+      .catch(error => {
+        console.log(error);
       });
+  };
+
+  getContractBalance = () => {
+    this.state.contract.getContractBalance.call().then(contractBalance => {
+      alert(
+        `Contract balance is ${parseInt(
+          web3.utils.numberToHex(contractBalance),
+          16
+        ) / converter} ETH`
+      );
     });
   };
 
   withdraw = () => {
-    this.state.rentalServiceInstance.deployed().then(rentalService => {
-      rentalService
-        .withdraw({
-          from: this.state.coinbase,
-          gas: 1000000
-        })
-        .then(transaction => {
-          this.updateAccountData();
-          this.props.setTransaction(transaction);
-        });
-    });
+    this.state.contract
+      .withdraw({
+        from: this.state.coinbase,
+        gas: 1000000
+      })
+      .then(transaction => {
+        this.updateAccountData();
+        this.props.setTransaction(transaction);
+      });
   };
 
   getMyRentals = () => {
-    return this.state.rentalServiceInstance
-      .deployed()
-      .then(rentalService => {
-        return rentalService.getRentalIdsByUser.call();
-      })
+    return this.state.contract.getRentalIdsByUser
+      .call()
       .then(rentals => {
         return rentals.map(id => {
           return parseInt(web3.utils.numberToHex(id), 16);
@@ -93,11 +96,8 @@ class MainView extends Component {
   };
 
   getGearById = id => {
-    return this.state.rentalServiceInstance
-      .deployed()
-      .then(rentalService => {
-        return rentalService.getGearById.call(id);
-      })
+    return this.state.contract.getGearById
+      .call(id)
       .then(gear => {
         return this.formatGear(gear);
       })
@@ -150,56 +150,52 @@ class MainView extends Component {
     );
 
     if (answer) {
-      return this.state.rentalServiceInstance.deployed().then(rentalService => {
-        return (
-          rentalService
-            // Send transaction with fixed amount of gas
-            .rentGear(gear.gearId, {
-              from: this.state.coinbase,
-              gas: 1000000,
-              value: gear.rentPrice
-            })
-            .then(transaction => {
-              // Update redux store
-              this.props.rentGear(gear.gearId);
-              this.props.setTransaction(transaction);
-              // Update balance and other account data
-              this.updateAccountData();
-            })
-            // .then(
-            //   rentalService
-            //     .Rent({ fromBlock: this.state.blockNumber })
-            //     .watch((err, res) => console.info('result: ', res))
-            // )
-            .catch(error => {
-              console.log('Error: ', error);
-            })
-        );
-      });
-    }
-  };
-
-  handleClickReturn = gear => {
-    return this.state.rentalServiceInstance.deployed().then(rentalService => {
       return (
-        rentalService
+        this.state.contract
           // Send transaction with fixed amount of gas
-          .returnGear(gear.gearId, {
+          .rentGear(gear.gearId, {
             from: this.state.coinbase,
-            gas: 1000000
+            gas: 1000000,
+            value: gear.rentPrice
           })
           .then(transaction => {
             // Update redux store
-            this.props.returnGear(gear.gearId);
+            this.props.rentGear(gear.gearId);
             this.props.setTransaction(transaction);
             // Update balance and other account data
             this.updateAccountData();
           })
+          // .then(
+          //   rentalService
+          //     .Rent({ fromBlock: this.state.blockNumber })
+          //     .watch((err, res) => console.info('result: ', res))
+          // )
           .catch(error => {
             console.log('Error: ', error);
           })
       );
-    });
+    }
+  };
+
+  handleClickReturn = gear => {
+    return (
+      this.state.contract
+        // Send transaction with fixed amount of gas
+        .returnGear(gear.gearId, {
+          from: this.state.coinbase,
+          gas: 1000000
+        })
+        .then(transaction => {
+          // Update redux store
+          this.props.returnGear(gear.gearId);
+          this.props.setTransaction(transaction);
+          // Update balance and other account data
+          this.updateAccountData();
+        })
+        .catch(error => {
+          console.log('Error: ', error);
+        })
+    );
   };
 
   render() {
